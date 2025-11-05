@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生座位表管理系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: #3f51b5;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+        }
+        
+        .btn i {
+            margin-right: 5px;
+        }
+        
+        .btn-primary {
+            background: #3f51b5;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #303f9f;
+        }
+        
+        .btn-secondary {
+            background: #607d8b;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #455a64;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #388e3c;
+        }
+        
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #f57c00;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .classroom-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+        
+        .classroom {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .seat {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            cursor: move;
+            font-size: 14px;
+            text-align: center;
+            padding: 5px;
+            box-sizing: border-box;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            word-break: break-all;
+            overflow: hidden;
+        }
+        
+        .seat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .seat.empty {
+            background: #e0e0e0;
+            color: #757575;
+        }
+        
+        .seat.boy {
+            background: #bbdefb;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+        
+        .seat.girl {
+            background: #ffcdd2;
+            color: #d32f2f;
+            border-left: 4px solid #d32f2f;
+        }
+        
+        .seat.moving {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+        
+        .teacher-area {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin-top: 20px;
+        }
+        
+        .teacher-desk {
+            grid-column: 3 / span 4;
+            height: 50px;
+            background: #c8e6c9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #388e3c;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .student-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .color-sample {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+        
+        .boy-sample {
+            background: #bbdefb;
+        }
+        
+        .girl-sample {
+            background: #ffcdd2;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #eaeaea;
+        }
+        
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 1cm;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .container, .container * {
+                visibility: visible;
+            }
+            .container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            .controls, footer, .student-info {
+                display: none;
+            }
+            .seat {
+                border: 1px solid #ddd;
+                box-shadow: none;
+                font-size: 16px !important;
+                font-weight: bold;
+                height: 50px;
+            }
+            .seat.empty {
+                visibility: hidden;
+                border: none;
+            }
+            .teacher-area {
+                margin-top: 30px;
+            }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .controls {
+                justify-content: center;
+            }
+            .btn {
+                min-width: 100px;
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            .classroom {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .teacher-desk {
+                grid-column: 2 / span 2;
+            }
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 5px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>学生座位表管理系统</h1>
+            <div class="subtitle">支持Excel导入、随机排座、拖拽调整和Word导出</div>
+        </header>
+        
+        <div class="controls">
+            <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+            <button class="btn btn-primary" id="importBtn">
+                <i>📁</i> 导入Excel
+            </button>
+            <button class="btn btn-secondary" id="downloadTemplateBtn">
+                <i>📋</i> 下载模板
+            </button>
+            <button class="btn btn-warning" id="addStudentBtn">
+                <i>➕</i> 增加学生
+            </button>
+            <button class="btn btn-warning" id="removeStudentBtn">
+                <i>➖</i> 减少学生
+            </button>
+            <button class="btn btn-secondary" id="randomBtn">
+                <i>🔀</i> 随机排座
+            </button>
+            <button class="btn btn-success" id="saveBtn">
+                <i>💾</i> 保存
+            </button>
+            <button class="btn btn-danger" id="clearBtn">
+                <i>🗑️</i> 清空
+            </button>
+            <button class="btn btn-primary" id="printBtn">
+                <i>🖨️</i> 打印
+            </button>
+            <button class="btn btn-success" id="exportWordBtn">
+                <i>📄</i> 导出Word
+            </button>
+        </div>
+        
+        <div class="classroom-container">
+            <div class="classroom" id="classroom">
+                <!-- 座位将通过JavaScript动态生成 -->
+            </div>
+            
+            <div class="teacher-area">
+                <div class="teacher-desk">讲台</div>
+            </div>
+            
+            <div class="student-info">
+                <div class="info-item">
+                    <div class="color-sample boy-sample"></div>
+                    <span>男生</span>
+                </div>
+                <div class="info-item">
+                    <div class="color-sample girl-sample"></div>
+                    <span>女生</span>
+                </div>
+                <div class="info-item">
+                    <span>总人数: <span id="totalStudents">0</span></span>
+                </div>
+                <div class="info-item">
+                    <span>男生: <span id="boyCount">0</span></span>
+                </div>
+                <div class="info-item">
+                    <span>女生: <span id="girlCount">0</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>学生座位表管理系统 &copy; 2023 - 拖动座位可交换位置，支持Excel导入导出</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const classroom = document.getElementById('classroom');
+            const importBtn = document.getElementById('importBtn');
+            const fileInput = document.getElementById('fileInput');
+            const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
+            const addStudentBtn = document.getElementById('addStudentBtn');
+            const removeStudentBtn = document.getElementById('removeStudentBtn');
+            const randomBtn = document.getElementById('randomBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const printBtn = document.getElementById('printBtn');
+            const exportWordBtn = document.getElementById('exportWordBtn');
+            const totalStudentsEl = document.getElementById('totalStudents');
+            const boyCountEl = document.getElementById('boyCount');
+            const girlCountEl = document.getElementById('girlCount');
+            
+            let students = [];
+            let seats = Array(72).fill(null); // 9行8列共72个座位
+            let draggedSeat = null;
+            
+            // 初始化教室座位
+            function initClassroom() {
+                classroom.innerHTML = '';
+                
+                for (let i = 0; i < 72; i++) {
+                    const seat = document.createElement('div');
+                    seat.className = 'seat empty';
+                    seat.textContent = '空';
+                    seat.dataset.index = i;
+                    
+                    if (seats[i]) {
+                        const student = seats[i];
+                        seat.className = `seat ${student.gender === '男' ? 'boy' : 'girl'}`;
+                        seat.textContent = `${student.name}`;
+                        if (student.rank) {
+                            seat.textContent += `（${student.rank}）`;
+                        }
+                        seat.dataset.studentName = student.name;
+                    }
+                    
+                    // 添加拖拽事件
+                    seat.draggable = true;
+                    seat.addEventListener('dragstart', handleDragStart);
+                    seat.addEventListener('dragover', handleDragOver);
+                    seat.addEventListener('dragenter', handleDragEnter);
+                    seat.addEventListener('dragleave', handleDragLeave);
+                    seat.addEventListener('drop', handleDrop);
+                    seat.addEventListener('dragend', handleDragEnd);
+                    
+                    classroom.appendChild(seat);
+                }
+                
+                updateStudentCount();
+            }
+            
+            // 更新学生统计
+            function updateStudentCount() {
+                const total = students.length;
+                const boys = students.filter(s => s.gender === '男').length;
+                const girls = total - boys;
+                
+                totalStudentsEl.textContent = total;
+                boyCountEl.textContent = boys;
+                girlCountEl.textContent = girls;
+            }
+            
+            // 下载Excel模板
+            function downloadExcelTemplate() {
+                // 创建示例数据
+                const templateData = [
+                    { 姓名: '张三', 性别: '男', 名次: '1' },
+                    { 姓名: '李四', 性别: '女', 名次: '2' },
+                    { 姓名: '王五', 性别: '男', 名次: '3' },
+                    { 姓名: '赵六', 性别: '女', 名次: '4' }
+                ];
+                
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(templateData);
+                
+                // 将工作表添加到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, '学生名单');
+                
+                // 生成Excel文件并下载
+                XLSX.writeFile(wb, '学生座位表模板.xlsx');
+            }
+            
+            // 导出到Word
+            function exportToWord() {
+                // 创建Word文档的HTML内容
+                const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        @page {
+                            size: A4 landscape;
+                            margin: 1cm;
+                        }
+                        body {
+                            font-family: 'Microsoft YaHei', sans-serif;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            table-layout: fixed;
+                        }
+                        td {
+                            border: 1px solid #000;
+                            height: 40px;
+                            text-align: center;
+                            vertical-align: middle;
+                            font-size: 16px; /* 小二号字 */
+                            font-weight: bold;
+                            padding: 5px;
+                            page-break-inside: avoid;
+                        }
+                        .teacher-desk {
+                            height: 30px;
+                            font-weight: bold;
+                            background-color: #f0f0f0;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <table>
+                        ${generateWordTableRows()}
+                        <tr>
+                            <td colspan="8" class="teacher-desk">讲台</td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
+                `;
+                
+                // 创建Blob对象
+                const blob = new Blob([htmlContent], { type: 'application/msword' });
+                
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `学生座位表_${new Date().toLocaleDateString()}.doc`;
+                
+                // 触发下载
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            // 生成Word表格的行
+            function generateWordTableRows() {
+                let rows = '';
+                
+                // 创建9行8列的表格
+                for (let row = 0; row < 9; row++) {
+                    rows += '<tr>';
+                    
+                    for (let col = 0; col < 8; col++) {
+                        const index = row * 8 + col;
+                        const student = seats[index];
+                        
+                        rows += `<td>${student ? student.name : ''}</td>`;
+                    }
+                    
+                    rows += '</tr>';
+                }
+                
+                return rows;
+            }
+            
+            // 拖拽开始
+            function handleDragStart(e) {
+                draggedSeat = this;
+                this.classList.add('moving');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', this.innerHTML);
+            }
+            
+            // 拖拽经过
+            function handleDragOver(e) {
+                if (e.preventDefault) {
+                    e.preventDefault();
+                }
+                e.dataTransfer.dropEffect = 'move';
+                return false;
+            }
+            
+            // 拖拽进入
+            function handleDragEnter(e) {
+                this.classList.add('moving');
+            }
+            
+            // 拖拽离开
+            function handleDragLeave(e) {
+                this.classList.remove('moving');
+            }
+            
+            // 拖拽放置
+            function handleDrop(e) {
+                if (e.stopPropagation) {
+                    e.stopPropagation();
+                }
+                
+                // 如果不是同一个座位才交换
+                if (draggedSeat !== this) {
+                    // 交换两个座位的数据
+                    const fromIndex = parseInt(draggedSeat.dataset.index);
+                    const toIndex = parseInt(this.dataset.index);
+                    
+                    // 交换数据
+                    const temp = seats[fromIndex];
+                    seats[fromIndex] = seats[toIndex];
+                    seats[toIndex] = temp;
+                    
+                    // 更新UI
+                    updateSeatUI(fromIndex);
+                    updateSeatUI(toIndex);
+                }
+                
+                return false;
+            }
+            
+            // 拖拽结束
+            function handleDragEnd(e) {
+                this.classList.remove('moving');
+                document.querySelectorAll('.seat').forEach(seat => {
+                    seat.classList.remove('moving');
+                });
+            }
+            
+            // 更新单个座位的UI
+            function updateSeatUI(index) {
+                const seatElement = document.querySelector(`.seat[data-index="${index}"]`);
+                
+                if (seats[index]) {
+                    const student = seats[index];
+                    seatElement.className = `seat ${student.gender === '男' ? 'boy' : 'girl'}`;
+                    seatElement.textContent = `${student.name}`;
+                    if (student.rank) {
+                        seatElement.textContent += `（${student.rank}）`;
+                    }
+                    seatElement.dataset.studentName = student.name;
+                } else {
+                    seatElement.className = 'seat empty';
+                    seatElement.textContent = '空';
+                    delete seatElement.dataset.studentName;
+                }
+                
+                // 重新绑定事件
+                seatElement.draggable = true;
+                seatElement.addEventListener('dragstart', handleDragStart);
+                seatElement.addEventListener('dragover', handleDragOver);
+                seatElement.addEventListener('dragenter', handleDragEnter);
+                seatElement.addEventListener('dragleave', handleDragLeave);
+                seatElement.addEventListener('drop', handleDrop);
+                seatElement.addEventListener('dragend', handleDragEnd);
+            }
+            
+            // 导入Excel文件
+            importBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        students = jsonData.map(row => {
+                            // 尝试不同的列名可能
+                            const name = row['姓名'] || row['名字'] || row['name'] || row['Name'] || '';
+                            const gender = row['性别'] || row['gender'] || row['Gender'] || '男';
+                            const rank = row['名次'] || row['排名'] || row['rank'] || row['Rank'] || '';
+                            
+                            return { name, gender, rank };
+                        }).filter(student => student.name.trim() !== ''); // 过滤空姓名
+                        
+                        if (students.length === 0) {
+                            alert('未找到有效学生数据，请检查Excel格式！');
+                            return;
+                        }
+                        
+                        // 清空座位
+                        seats = Array(72).fill(null);
+                        
+                        // 将学生随机分配到前N个座位
+                        const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
+                        for (let i = 0; i < Math.min(shuffledStudents.length, 72); i++) {
+                            seats[i] = shuffledStudents[i];
+                        }
+                        
+                        initClassroom();
+                        alert(`成功导入 ${students.length} 名学生数据！`);
+                    } catch (error) {
+                        console.error('导入Excel出错:', error);
+                        alert('导入Excel文件出错，请检查文件格式！');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+            
+            // 增加学生
+            addStudentBtn.addEventListener('click', function() {
+                const name = prompt("请输入学生姓名:");
+                if (!name || name.trim() === '') return;
+                
+                let gender = prompt("请输入学生性别(男/女):", "男");
+                if (!gender) return;
+                
+                // 标准化性别输入
+                if (gender !== '男' && gender !== '女') {
+                    gender = '男'; // 默认值
+                }
+                
+                const rank = prompt("请输入学生名次（可选）:", "");
+                
+                const newStudent = {
+                    name: name.trim(),
+                    gender: gender,
+                    rank: rank || ""
+                };
+                
+                students.push(newStudent);
+                
+                // 找到第一个空座位
+                const emptySeatIndex = seats.findIndex(seat => seat === null);
+                if (emptySeatIndex !== -1) {
+                    seats[emptySeatIndex] = newStudent;
+                    updateSeatUI(emptySeatIndex);
+                    updateStudentCount();
+                } else {
+                    alert("没有空座位了！");
+                }
+            });
+            
+            // 减少学生
+            removeStudentBtn.addEventListener('click', function() {
+                if (students.length === 0) {
+                    alert("没有学生可移除！");
+                    return;
+                }
+                
+                const studentList = students.map((s, i) => `${i+1}. ${s.name} (${s.gender})`).join('\n');
+                const studentName = prompt(`请输入要移除的学生姓名:\n\n当前学生列表:\n${studentList}`);
+                if (!studentName) return;
+                
+                const studentIndex = students.findIndex(s => s.name === studentName);
+                if (studentIndex === -1) {
+                    alert("未找到该学生！");
+                    return;
+                }
+                
+                // 从座位中移除该学生
+                const seatIndex = seats.findIndex(seat => seat && seat.name === studentName);
+                if (seatIndex !== -1) {
+                    seats[seatIndex] = null;
+                    updateSeatUI(seatIndex);
+                }
+                
+                // 从学生列表中移除
+                students.splice(studentIndex, 1);
+                updateStudentCount();
+            });
+            
+            // 随机排座
+            randomBtn.addEventListener('click', function() {
+                if (students.length === 0) {
+                    alert('请先导入或添加学生！');
+                    return;
+                }
+                
+                // 过滤出已分配的学生
+                const assignedStudents = seats.filter(student => student !== null);
+                
+                // 随机打乱学生顺序
+                const shuffledStudents = [...assignedStudents].sort(() => Math.random() - 0.5);
+                
+                // 清空座位
+                seats = Array(72).fill(null);
+                
+                // 重新分配座位
+                for (let i = 0; i < shuffledStudents.length; i++) {
+                    if (i >= 72) break;
+                    seats[i] = shuffledStudents[i];
+                }
+                
+                initClassroom();
+            });
+            
+            // 保存座位表
+            saveBtn.addEventListener('click', function() {
+                const dataToSave = {
+                    students: students,
+                    seats: seats,
+                    savedAt: new Date().toISOString()
+                };
+                
+                localStorage.setItem('classroomSeatingChart', JSON.stringify(dataToSave));
+                alert('座位表已保存到浏览器本地存储！');
+            });
+            
+            // 清空座位表
+            clearBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有座位表数据吗？此操作不可撤销！')) {
+                    students = [];
+                    seats = Array(72).fill(null);
+                    initClassroom();
+                    localStorage.removeItem('classroomSeatingChart');
+                }
+            });
+            
+            // 打印座位表
+            printBtn.addEventListener('click', function() {
+                window.print();
+            });
+            
+            // 绑定按钮事件
+            downloadTemplateBtn.addEventListener('click', downloadExcelTemplate);
+            exportWordBtn.addEventListener('click', exportToWord);
+            
+            // 尝试加载保存的座位表
+            function loadSavedSeating() {
+                const savedData = localStorage.getItem('classroomSeatingChart');
+                if (savedData) {
+                    try {
+                        const parsedData = JSON.parse(savedData);
+                        students = parsedData.students || [];
+                        seats = parsedData.seats || Array(72).fill(null);
+                        initClassroom();
+                    } catch (e) {
+                        console.error('加载保存的数据失败:', e);
+                    }
+                }
+            }
+            
+            // 初始化
+            loadSavedSeating();
+            initClassroom();
+        });
+    </script>
+</body>
+</html>
